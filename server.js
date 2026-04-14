@@ -10,59 +10,91 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
-// Spiel-Daten
-const categories = ["Stadt", "Land", "Fluss", "männlicher Vorname", "Farbe", "Beruf", "Tier"];
+// Kategorien-Liste
+const categories = ["Automarken", "Obstsorten", "Berufe", "Städte", "Tiere", "Farben"];
+
 let gameState = {
-    players: [], // { id, name, answers: [] }
+    players: [], 
     categoryIndex: 0,
-    activePlayerIndex: 0,
-    gameStarted: false
+    activePlayerIndex: 0
 };
 
 io.on('connection', (socket) => {
-    console.log('Verbindung:', socket.id);
-
-    // Spieler tritt bei
+    
+    // SPIELER TRITT BEI
     socket.on('joinGame', (username) => {
         const newPlayer = {
             id: socket.id,
             name: username,
-            answers: []
+            answers: [],
+            reports: [],         // --- NEU: Wer hat diesen Spieler gemeldet? ---
+            isDeactivated: false // --- NEU: Ist der Spieler gerade stumm? ---
         };
         gameState.players.push(newPlayer);
         io.emit('updateState', gameState);
     });
 
-    // Kategorie wechseln
+    // VETO / REPORT LOGIK
+    socket.on('toggleReport', (targetId) => {
+        const target = gameState.players.find(p => p.id === targetId);
+        const reporterId = socket.id;
+
+        if (target && targetId !== reporterId) {
+            // Wenn schon gemeldet -> entfernen, sonst -> hinzufügen (Toggle)
+            if (target.reports.includes(reporterId)) {
+                target.reports = target.reports.filter(id => id !== reporterId);
+            } else {
+                target.reports.push(reporterId);
+            }
+
+            // Prüfung: Haben ALLE anderen (außer dem Ziel selbst) gemeldet?
+            const neededVotes = gameState.players.length - 1;
+            if (neededVotes > 0 && target.reports.length >= neededVotes) {
+                target.isDeactivated = true;
+                
+                // Falls der Spieler gerade dran war, springe sofort zum Nächsten
+                if (gameState.players[gameState.activePlayerIndex].id === targetId) {
+                    moveToNextPlayer();
+                }
+            } else {
+                target.isDeactivated = false;
+            }
+            io.emit('updateState', gameState);
+        }
+    });
+
+    // ANTWORT SENDEN
+    socket.on('submitAnswer', (answer) => {
+        const currentPlayer = gameState.players[gameState.activePlayerIndex];
+        
+        // Nur wenn der Spieler dran ist, nicht deaktiviert ist und Text gesendet hat
+        if (currentPlayer && socket.id === currentPlayer.id && !currentPlayer.isDeactivated && answer.trim().length > 0) {
+            currentPlayer.answers.push(answer.substring(0, 50));
+            moveToNextPlayer();
+            io.emit('updateState', gameState);
+        }
+    });
+
+    // KATEGORIE WECHSELN
     socket.on('nextCategory', () => {
         gameState.categoryIndex = (gameState.categoryIndex + 1) % categories.length;
-        // Bei neuer Kategorie Antworten leeren und von vorne anfangen
         gameState.players.forEach(p => p.answers = []);
         gameState.activePlayerIndex = 0;
         io.emit('updateState', gameState);
     });
 
-    // Antwort senden
-    socket.on('submitAnswer', (answer) => {
-        const currentPlayer = gameState.players[gameState.activePlayerIndex];
-        
-        // Prüfen, ob der richtige Spieler gesendet hat
-        if (socket.id === currentPlayer.id) {
-            currentPlayer.answers.push(answer);
-            
-            // Nächster Spieler ist dran
+    // HILFSFUNKTION: Zum nächsten aktiven Spieler springen
+    function moveToNextPlayer() {
+        if (gameState.players.length === 0) return;
+        let startIndex = gameState.activePlayerIndex;
+        do {
             gameState.activePlayerIndex = (gameState.activePlayerIndex + 1) % gameState.players.length;
-            
-            io.emit('updateState', gameState);
-        }
-    });
+            // Höre auf zu suchen, wenn der Spieler aktiv ist ODER wir einmal im Kreis sind
+        } while (gameState.players[gameState.activePlayerIndex].isDeactivated && gameState.activePlayerIndex !== startIndex);
+    }
 
-    // Trennung behandeln
     socket.on('disconnect', () => {
         gameState.players = gameState.players.filter(p => p.id !== socket.id);
-        if (gameState.activePlayerIndex >= gameState.players.length) {
-            gameState.activePlayerIndex = 0;
-        }
         io.emit('updateState', gameState);
     });
 });
