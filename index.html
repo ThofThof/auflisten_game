@@ -18,7 +18,14 @@
             margin-bottom: 4px;
             padding: 4px 8px;
             border-radius: 4px;
-            border-left: 3px solid #007bff; /* Ein kleiner blauer Strich links */
+            border-left: 3px solid #007bff;
+    
+            /* Sicherheitseinstellungen gegen Layout-Sprengung */
+            max-width: 100%;      /* Nicht breiter als der Block */
+            overflow: hidden;     /* Inhalt verstecken, der übersteht */
+            text-overflow: ellipsis; /* Die berühmten drei Punkte (...) bei Überlauf */
+            white-space: nowrap;  /* Verhindert Zeilenumbruch innerhalb einer Antwort */
+            word-break: break-all;
         }
         body { font-family: sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; }
         #setup, #game { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; width: 90%; max-width: 600px; }
@@ -26,7 +33,11 @@
         
         /* Spieler-Blöcke */
         #player-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .player-block { border: 2px solid #ddd; padding: 10px; border-radius: 5px; background: #fff; }
+        .player-block { 
+            border: 2px solid #ddd; padding: 10px; border-radius: 5px; background: #fff; 
+            min-width: 0; /* Wichtig in CSS-Grids, damit die Box mitschrumpfen kann */
+            overflow: hidden;
+                      }
         .player-block.active { border-color: #007bff; background: #e7f3ff; }
         .player-name { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
         .answer-list { font-size: 0.9em; color: #555; }
