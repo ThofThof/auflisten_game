@@ -3,70 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiplayer Listen-Spiel</title>
+    <title>Multiplayer Game</title>
     <style>
-        .answer-list {
-            margin-top: 10px;
-            max-height: 200px; /* Damit der Block nicht unendlich lang wird */
-            overflow-y: auto;  /* Scrollbalken, falls es zu viele Antworten sind */
-            font-size: 1em;
-            color: #333;
-        }
-
-        .answer-entry {
-            background: #f9f9f9;
-            margin-bottom: 4px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            border-left: 3px solid #007bff;
-    
-            /* Sicherheitseinstellungen gegen Layout-Sprengung */
-            max-width: 100%;      /* Nicht breiter als der Block */
-            overflow: hidden;     /* Inhalt verstecken, der übersteht */
-            text-overflow: ellipsis; /* Die berühmten drei Punkte (...) bei Überlauf */
-            white-space: nowrap;  /* Verhindert Zeilenumbruch innerhalb einer Antwort */
-            word-break: break-all;
-        }
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; }
-        #setup, #game { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-top: 20px; width: 90%; max-width: 600px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #setup, #game { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
         .hidden { display: none !important; }
         
-        /* Spieler-Blöcke */
-        #player-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .player-block { 
-            border: 2px solid #ddd; padding: 10px; border-radius: 5px; background: #fff; 
-            min-width: 0; /* Wichtig in CSS-Grids, damit die Box mitschrumpfen kann */
-            overflow: hidden;
-                      }
-        .player-block.active { border-color: #007bff; background: #e7f3ff; }
-        .player-name { font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; }
-        .answer-list { font-size: 0.9em; color: #555; }
+        /* Spieler-Blöcke Layout */
+        #player-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .player-block { border: 2px solid #ddd; padding: 15px; border-radius: 8px; background: #fff; position: relative; transition: all 0.3s; }
+        .player-block.active { border-color: #007bff; background: #f0f7ff; transform: scale(1.02); }
+        
+        /* --- NEU: Deaktiviert Style --- */
+        .player-block.deactivated { background: #ffe5e5; border-color: #ff4d4d; opacity: 0.7; }
+        .player-block.deactivated .player-name { text-decoration: line-through; color: #cc0000; }
 
-        input, button { padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #007bff; color: white; cursor: pointer; border: none; }
-        button:disabled { background: #ccc; }
-        .category-display { font-size: 1.5em; font-weight: bold; color: #333; }
+        .player-name { font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* --- NEU: Veto Button Style --- */
+        .report-btn { font-size: 0.7em; padding: 4px 8px; border: none; border-radius: 4px; background: #ffc107; cursor: pointer; }
+        .report-btn.active { background: #dc3545; color: white; }
+
+        .answer-list { max-height: 150px; overflow-y: auto; }
+        .answer-entry { 
+            background: #f1f3f5; margin-bottom: 5px; padding: 6px; border-radius: 4px; 
+            font-size: 0.95em; border-left: 4px solid #007bff;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        input, button { padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+        button { background: #007bff; color: white; font-weight: bold; border: none; cursor: pointer; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .category-header { font-size: 1.8em; text-align: center; color: #222; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
     <div id="setup">
-        <h2>Tritt dem Spiel bei</h2>
-        <input type="text" id="username" placeholder="Dein Name">
-        <button onclick="join()">Beitreten</button>
+        <h2 style="margin-top:0">Willkommen!</h2>
+        <input type="text" id="username" placeholder="Gib deinen Namen ein...">
+        <button onclick="join()">Spiel beitreten</button>
     </div>
 
     <div id="game" class="hidden">
-        <div class="category-display">Kategorie: <span id="category-name">-</span></div>
-        <button onclick="nextCategory()" style="background: #28a745;">Nächste Kategorie</button>
+        <div class="category-header">Kategorie: <span id="category-name">Lädt...</span></div>
+        <button onclick="nextCategory()" style="background: #28a745; margin-bottom: 20px;">Nächste Kategorie ➔</button>
         
-        <hr>
-        
-        <div id="turn-info" style="margin-bottom: 10px; font-weight: bold;"></div>
+        <div id="turn-info" style="text-align:center; margin-bottom:15px; font-weight:bold; color: #007bff;"></div>
         
         <div id="input-area">
-            <input type="text" id="answer-input" placeholder="Deine Antwort...">
-            <button id="send-btn" onclick="sendAnswer()">Senden</button>
+            <input type="text" id="answer-input" placeholder="Deine Antwort tippen...">
+            <button id="send-btn" onclick="sendAnswer()">Abschicken</button>
         </div>
 
         <div id="player-container"></div>
@@ -76,13 +63,11 @@
     <script>
         const socket = io();
         const categories = ["Automarken", "Obstsorten", "Berufe", "Städte", "Tiere", "Farben"];
-        let myId = "";
 
         function join() {
             const name = document.getElementById('username').value;
-            if(name) {
-                myId = socket.id;
-                socket.emit('joinGame', name);
+            if(name.trim()) {
+                socket.emit('joinGame', name.trim());
                 document.getElementById('setup').classList.add('hidden');
                 document.getElementById('game').classList.remove('hidden');
             }
@@ -90,57 +75,70 @@
 
         function sendAnswer() {
             const input = document.getElementById('answer-input');
-            socket.emit('submitAnswer', input.value);
-            input.value = "";
+            if(input.value.trim()) {
+                socket.emit('submitAnswer', input.value);
+                input.value = "";
+            }
         }
 
         function nextCategory() {
             socket.emit('nextCategory');
         }
 
-        socket.on('updateState', (state) => {
-    // Kategorie anzeigen
-    document.getElementById('category-name').innerText = categories[state.categoryIndex];
-
-    // Spieler-Blöcke bauen
-    const container = document.getElementById('player-container');
-    container.innerHTML = "";
-
-    state.players.forEach((player, index) => {
-        const isActive = index === state.activePlayerIndex;
-        const block = document.createElement('div');
-        block.className = `player-block ${isActive ? 'active' : ''}`;
-        
-        // NEU: Wir erstellen für jede Antwort eine eigene Zeile (div)
-        const answersHtml = player.answers.map(ans => {
-            // Wenn die Antwort länger als 25 Zeichen ist, kürzen wir sie
-            const shortAns = ans.length > 25 ? ans.substring(0, 25) + "..." : ans;
-            return `<div class="answer-entry" title="${ans}">${shortAns}</div>`;
-        }).join('');
-
-        block.innerHTML = `
-            <div class="player-name">
-                ${player.name} ${isActive ? ' [🟢]' : ''}
-            </div>
-            <div class="answer-list">
-                ${answersHtml} 
-            </div>
-        `;
-        container.appendChild(block);
-
-        // Input-Logik (unverändert)
-        if (isActive && player.id === socket.id) {
-            document.getElementById('turn-info').innerText = "DU bist dran!";
-            document.getElementById('answer-input').disabled = false;
-            document.getElementById('send-btn').disabled = false;
-            document.getElementById('answer-input').focus(); // Direkt ins Feld springen
-        } else if (isActive) {
-            document.getElementById('turn-info').innerText = player.name + " ist dran...";
-            document.getElementById('answer-input').disabled = true;
-            document.getElementById('send-btn').disabled = true;
+        function toggleReport(id) {
+            socket.emit('toggleReport', id);
         }
-    });
-});
+
+        socket.on('updateState', (state) => {
+            document.getElementById('category-name').innerText = categories[state.categoryIndex];
+            const container = document.getElementById('player-container');
+            container.innerHTML = "";
+
+            state.players.forEach((player, index) => {
+                const isActive = index === state.activePlayerIndex;
+                const isMe = player.id === socket.id;
+                const hasReported = player.reports.includes(socket.id);
+
+                const block = document.createElement('div');
+                block.className = `player-block ${isActive ? 'active' : ''} ${player.isDeactivated ? 'deactivated' : ''}`;
+                
+                // Antworten kürzen und auflisten
+                const answersHtml = player.answers.map(ans => {
+                    const short = ans.length > 25 ? ans.substring(0, 25) + "..." : ans;
+                    return `<div class="answer-entry">${short}</div>`;
+                }).join('');
+
+                block.innerHTML = `
+                    <div class="player-name">
+                        <span>${player.name} ${isActive ? '🟢' : ''}</span>
+                        ${!isMe ? `
+                            <button class="report-btn ${hasReported ? 'active' : ''}" onclick="toggleReport('${player.id}')">
+                                ${hasReported ? 'Veto weg' : 'Veto!'} (${player.reports.length})
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div class="answer-list">${answersHtml}</div>
+                `;
+                container.appendChild(block);
+
+                // Steuerung des Input-Feldes
+                if (isActive && isMe) {
+                    document.getElementById('turn-info').innerText = "DU bist dran!";
+                    document.getElementById('answer-input').disabled = false;
+                    document.getElementById('send-btn').disabled = false;
+                    document.getElementById('answer-input').focus();
+                } else if (isActive) {
+                    document.getElementById('turn-info').innerText = player.name + " ist dran...";
+                    document.getElementById('answer-input').disabled = true;
+                    document.getElementById('send-btn').disabled = true;
+                }
+            });
+        });
+
+        // Abschicken mit Enter-Taste
+        document.getElementById('answer-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendAnswer();
+        });
     </script>
 </body>
 </html>
