@@ -101,7 +101,11 @@
         block.className = `player-block ${isActive ? 'active' : ''}`;
         
         // NEU: Wir erstellen für jede Antwort eine eigene Zeile (div)
-        const answersHtml = player.answers.map(ans => `<div class="answer-entry">${ans}</div>`).join('');
+        const answersHtml = player.answers.map(ans => {
+            // Wenn die Antwort länger als 25 Zeichen ist, kürzen wir sie
+            const shortAns = ans.length > 25 ? ans.substring(0, 25) + "..." : ans;
+            return `<div class="answer-entry" title="${ans}">${shortAns}</div>`;
+        }).join('');
 
         block.innerHTML = `
             <div class="player-name">
