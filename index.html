@@ -73,42 +73,44 @@
         }
 
         socket.on('updateState', (state) => {
-            // Kategorie anzeigen
-            document.getElementById('category-name').innerText = categories[state.categoryIndex];
+    // Kategorie anzeigen
+    document.getElementById('category-name').innerText = categories[state.categoryIndex];
 
-            // Spieler-Blöcke bauen
-            const container = document.getElementById('player-container');
-            container.innerHTML = "";
+    // Spieler-Blöcke bauen
+    const container = document.getElementById('player-container');
+    container.innerHTML = "";
 
-            state.players.forEach((player, index) => {
-                const isActive = index === state.activePlayerIndex;
-                const block = document.createElement('div');
-                block.className = `player-block ${isActive ? 'active' : ''}`;
-                
-                block.innerHTML = `
-                    <div class="player-name">${player.name} ${isActive ? ' (Dran!)' : ''}</div>
-                    <div class="answer-list">${player.answers.join(', ')}</div>
-                `;
-                container.appendChild(block);
+    state.players.forEach((player, index) => {
+        const isActive = index === state.activePlayerIndex;
+        const block = document.createElement('div');
+        block.className = `player-block ${isActive ? 'active' : ''}`;
+        
+        // NEU: Wir erstellen für jede Antwort eine eigene Zeile (div)
+        const answersHtml = player.answers.map(ans => `<div class="answer-entry">${ans}</div>`).join('');
 
-                // Wenn ICH dran bin, Input aktivieren
-                if (isActive && player.id === socket.id) {
-                    document.getElementById('turn-info').innerText = "DU bist dran!";
-                    document.getElementById('answer-input').disabled = false;
-                    document.getElementById('send-btn').disabled = false;
-                } else if (isActive) {
-                    document.getElementById('turn-info').innerText = player.name + " ist dran...";
-                    if (player.id !== socket.id) {
-                        document.getElementById('answer-input').disabled = true;
-                        document.getElementById('send-btn').disabled = true;
-                    }
-                }
-            });
-            
-            if (state.players.length === 0) {
-                document.getElementById('turn-info').innerText = "Warte auf Mitspieler...";
-            }
-        });
+        block.innerHTML = `
+            <div class="player-name">
+                ${player.name} ${isActive ? ' 🟢' : ''}
+            </div>
+            <div class="answer-list">
+                ${answersHtml} 
+            </div>
+        `;
+        container.appendChild(block);
+
+        // Input-Logik (unverändert)
+        if (isActive && player.id === socket.id) {
+            document.getElementById('turn-info').innerText = "DU bist dran!";
+            document.getElementById('answer-input').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('answer-input').focus(); // Direkt ins Feld springen
+        } else if (isActive) {
+            document.getElementById('turn-info').innerText = player.name + " ist dran...";
+            document.getElementById('answer-input').disabled = true;
+            document.getElementById('send-btn').disabled = true;
+        }
+    });
+});
     </script>
 </body>
 </html>
